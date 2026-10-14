@@ -49,6 +49,12 @@ int CDECL lp_checkin() {
 	return 0;
 }
 
+int CDECL lp_errstring() {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("lp_errstring()\n");
+	return 0;
+}
+
 } // namespace lmgr
 
 #include "lmgr_trampolines.h"
@@ -67,6 +73,8 @@ static void *resolveByOrdinal(uint16_t ordinal) {
 		return (void *)thunk_lmgr_lp_checkin;
 	case 190:
 		return (void *)thunk_lmgr_lp_checkout;
+	case 191:
+		return (void *)thunk_lmgr_lp_errstring;
 	case 249:
 		return (void *)thunk_lmgr_lc_new_job;
 	}

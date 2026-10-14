@@ -3,6 +3,7 @@
 #include "common.h"
 #include "context.h"
 #include "errors.h"
+#include "heap.h"
 #include "modules.h"
 
 #include <cstring>
@@ -152,6 +153,25 @@ HRESULT WINAPI CLSIDFromString(LPCWSTR lpsz, GUID *pclsid) {
 	}
 
 	return parseGuidString(begin, end, *pclsid);
+}
+
+void WINAPI CoUninitialize() {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: CoUninitialize()\n");
+}
+
+GUEST_PTR WINAPI CoTaskMemAlloc(SIZE_T cb) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("CoTaskMemAlloc(%zu)\n", static_cast<size_t>(cb));
+	return toGuestPtr(wibo::heap::guestMalloc(cb));
+}
+
+void WINAPI CoTaskMemFree(LPVOID pv) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("CoTaskMemFree(%p)\n", pv);
+	if (pv) {
+		wibo::heap::guestFree(pv);
+	}
 }
 
 } // namespace ole32

@@ -592,7 +592,7 @@ UINT WINAPI SetHandleCount(UINT uNumber) {
 }
 
 DWORD WINAPI FormatMessageA(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPSTR lpBuffer,
-							DWORD nSize, va_list *Arguments) {
+							DWORD nSize, GUEST_PTR *Arguments) {
 	HOST_CONTEXT_GUARD();
 	DEBUG_LOG("FormatMessageA(%u, %p, %u, %u, %p, %u, %p)\n", dwFlags, lpSource, dwMessageId, dwLanguageId, lpBuffer,
 			  nSize, Arguments);

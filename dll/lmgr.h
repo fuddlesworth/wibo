@@ -12,5 +12,6 @@ int CDECL lc_checkin();
 
 int CDECL lp_checkout(int a, int b, LPCSTR c, LPCSTR d, int e, LPCSTR f, int *out);
 int CDECL lp_checkin();
+int CDECL lp_errstring();
 
 } // namespace lmgr

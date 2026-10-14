@@ -7,9 +7,17 @@
 #include <cstring>
 #include <unistd.h>
 
+// macOS defines these as macros
+#undef htons
+#undef ntohs
+
 namespace {
 
 constexpr int SOCKET_ERROR = -1;
+constexpr UINT INVALID_SOCKET = ~0u;
+constexpr ULONG INADDR_NONE = 0xFFFFFFFF;
+constexpr int WSAENOTSOCK = 10038;
+constexpr int WSAENETDOWN = 10050;
 constexpr int WSAEFAULT = 10014;
 constexpr int WSAHOST_NOT_FOUND = 11001;
 constexpr int WSANOTINITIALISED = 10093;
@@ -125,6 +133,82 @@ int WINAPI select(int nfds, LPVOID readfds, LPVOID writefds, LPVOID exceptfds, c
 	return 0;
 }
 
+// No sockets are ever created. The callers seen so far (FlexLM inside MWCC) only import these
+UINT WINAPI socket(int af, int type, int protocol) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: socket(%d, %d, %d)\n", af, type, protocol);
+	if (!requireStarted()) {
+		return INVALID_SOCKET;
+	}
+	setLastError(WSAENETDOWN);
+	return INVALID_SOCKET;
+}
+
+int WINAPI connect(UINT s, const void *name, int namelen) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: connect(%u, %p, %d)\n", s, name, namelen);
+	setLastError(WSAENOTSOCK);
+	return SOCKET_ERROR;
+}
+
+int WINAPI send(UINT s, const char *buf, int len, int flags) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: send(%u, %p, %d, %d)\n", s, buf, len, flags);
+	setLastError(WSAENOTSOCK);
+	return SOCKET_ERROR;
+}
+
+int WINAPI recv(UINT s, char *buf, int len, int flags) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: recv(%u, %p, %d, %d)\n", s, buf, len, flags);
+	setLastError(WSAENOTSOCK);
+	return SOCKET_ERROR;
+}
+
+int WINAPI shutdown(UINT s, int how) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: shutdown(%u, %d)\n", s, how);
+	setLastError(WSAENOTSOCK);
+	return SOCKET_ERROR;
+}
+
+int WINAPI closesocket(UINT s) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: closesocket(%u)\n", s);
+	setLastError(WSAENOTSOCK);
+	return SOCKET_ERROR;
+}
+
+WORD WINAPI htons(WORD hostshort) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("htons(%u)\n", hostshort);
+	return static_cast<WORD>((hostshort >> 8) | (hostshort << 8));
+}
+
+WORD WINAPI ntohs(WORD netshort) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("ntohs(%u)\n", netshort);
+	return static_cast<WORD>((netshort >> 8) | (netshort << 8));
+}
+
+ULONG WINAPI inet_addr(LPCSTR cp) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: inet_addr(%s)\n", cp ? cp : "(null)");
+	return INADDR_NONE;
+}
+
+GUEST_PTR WINAPI inet_ntoa(ULONG in) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: inet_ntoa(0x%x)\n", in);
+	return GUEST_NULL;
+}
+
+int WINAPI __WSAFDIsSet(UINT fd, LPVOID set) {
+	HOST_CONTEXT_GUARD();
+	DEBUG_LOG("STUB: __WSAFDIsSet(%u, %p)\n", fd, set);
+	return 0;
+}
+
 } // namespace ws2
 
 #include "ws2_trampolines.h"
@@ -133,16 +217,40 @@ static void *resolveByOrdinal(uint16_t ordinal) {
 	// GHS 5.3.22 imports WS2_32.dll with the legacy winsock ordinal table.
 	// Keep these mappings tied to observed call sites rather than modern WS2_32 export ordinals.
 	switch (ordinal) {
+	case 3:
+		return (void *)thunk_ws2_closesocket;
+	case 4:
+		return (void *)thunk_ws2_connect;
+	case 9:
+		return (void *)thunk_ws2_htons;
+	case 11:
+		return (void *)thunk_ws2_inet_addr;
+	case 12:
+		return (void *)thunk_ws2_inet_ntoa;
+	case 15:
+		return (void *)thunk_ws2_ntohs;
+	case 16:
+		return (void *)thunk_ws2_recv;
 	case 18:
 		return (void *)thunk_ws2_select;
+	case 19:
+		return (void *)thunk_ws2_send;
+	case 22:
+		return (void *)thunk_ws2_shutdown;
+	case 23:
+		return (void *)thunk_ws2_socket;
 	case 52:
 		return (void *)thunk_ws2_gethostbyname;
 	case 57:
 		return (void *)thunk_ws2_gethostname;
+	case 111:
+		return (void *)thunk_ws2_WSAGetLastError;
 	case 115:
 		return (void *)thunk_ws2_WSAStartup;
 	case 116:
 		return (void *)thunk_ws2_WSACleanup;
+	case 151:
+		return (void *)thunk_ws2___WSAFDIsSet;
 	}
 	return nullptr;
 }
